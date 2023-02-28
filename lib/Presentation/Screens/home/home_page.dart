@@ -2,6 +2,7 @@
 
 import 'dart:developer';
 
+import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
 import 'package:flutter_link_previewer/flutter_link_previewer.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -21,6 +22,8 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool _isLoading = false;
+
+  final scafoldKey = GlobalKey<ScaffoldState>();
 
   final _searchController = TextEditingController();
   final _containerHeight = 47.0;
@@ -162,58 +165,84 @@ class _HomePageState extends State<HomePage> {
                       child: InkWell(
                         onTap: () async {
                           try {
-                            await createFolders();
                             setState(() {
                               _isLoading = true;
                             });
-                            if (_isLoading) {
-                              url = _searchController.text.trim();
-                              showDialog(
-                                context: context,
-                                builder: (context) {
-                                  return StreamBuilder<Data>(
-                                    stream: requestData(url),
-                                    builder: (context, snapshot) {
-                                      if (snapshot.hasError) {
-                                        return AlertDialog(
-                                          content:
-                                              Text(snapshot.error.toString()),
-                                        );
-                                      } else if (!snapshot.hasData) {
-                                        return const Center(
-                                            child: CircularProgressIndicator
-                                                .adaptive(
-                                          backgroundColor: Color(0xffFE2C55),
-                                        ));
-                                      }
-                                      final data = snapshot.data!;
-                                      return AlertDialog(
-                                          content: Container(
-                                        height: 400,
-                                        child: Column(
-                                          children: [
-                                            Column(
-                                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                                              children: [
-                                                Container(
-                                                  height: 300,
-                                                  width: 300,
 
+                            if (_isLoading == true) {
+                              url = _searchController.text.trim();
+                              requestData(url);
+
+                              if (context.mounted) {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    return FutureBuilder<Data>(
+                                      future: requestData(url),
+                                      builder: (context, snapshot) {
+                                        if (snapshot.hasError) {
+                                          return AlertDialog(
+                                            content:
+                                                Text(snapshot.error.toString()),
+                                          );
+                                        } else if (!snapshot.hasData) {
+                                          return const Center(
+                                              child: CircularProgressIndicator
+                                                  .adaptive(
+                                            backgroundColor: Color(0xffFE2C55),
+                                          ));
+                                        }
+                                        final data = snapshot.data!;
+                                        return AlertDialog(
+                                            content: Container(
+                                          height: 500,
+                                          child: Column(
+                                            children: [
+                                              Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.stretch,
+                                                children: [
+                                                  Container(
+                                                    height: 300,
+                                                    width: 300,
                                                     child: Image.network(
-                                                      fit:BoxFit.contain,
+                                                        fit: BoxFit.contain,
                                                         data.originCover),
                                                   ),
-                                              ],
-                                            )
-                                          ],
-                                        ),
-                                      ));
-                                    },
-                                  );
-                                },
-                              );
-
-                              requestData(url);
+                                                ],
+                                              ),
+                                              const SizedBox(
+                                                height: 10,
+                                              ),
+                                              Text(
+                                                data.title,
+                                                style: GoogleFonts.cormorant(
+                                                    fontSize: 17,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.black),
+                                              ),
+                                              const SizedBox(
+                                                height: 10,
+                                              ),
+                                              ElevatedButton(
+                                                onPressed: () async {
+                                                  try {
+                                                    await downloadVideo(
+                                                        data.wmplay);
+                                                  } catch (error) {
+                                                    print(error.toString());
+                                                  }
+                                                },
+                                                child: const Text("Download"),
+                                              )
+                                            ],
+                                          ),
+                                        ));
+                                      },
+                                    );
+                                  },
+                                );
+                              }
                             }
                           } on Exception catch (error) {
                             log(error.toString());
